@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -165,24 +164,7 @@ func Routes(app *fiber.App) {
 
 	port := os.Getenv("APP_PORT")
 	log.Println("Listening on port : ", port)
-	// app.Listen(":" + port)
-
-	// Create tls certificate
-	cer, err := tls.LoadX509KeyPair("../../go-server.cert", "../../go-server.key")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	config := &tls.Config{Certificates: []tls.Certificate{cer}}
-
-	// Create custom listener
-	ln, err := tls.Listen("tcp", ":3003", config)
-	if err != nil {
-		panic(err)
-	}
-
-	// Start server with https/ssl enabled on http://localhost:443
-	log.Fatal(app.Listener(ln))
+	app.Listen(":" + port)
 }
 
 type ParamsAKM struct {
