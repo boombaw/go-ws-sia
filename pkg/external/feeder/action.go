@@ -1,0 +1,9 @@
+package feeder
+
+// actions available on feeder
+const (
+	GET_TOKEN                  = "GetToken"
+	GET_AKM                    = "GetAktivitasKuliahMahasiswa"
+	GET_RIWAYAT_PENDIDIKAN_MHS = "GetListRiwayatPendidikanMahasiswa"
+	UPDATE_LIST_KULIAH_MHS     = "UpdatePerkuliahanMahasiswa"
+)

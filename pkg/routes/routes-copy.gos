@@ -1,0 +1,74 @@
+package routes
+
+import (
+	"log"
+	"os"
+
+	"github.com/ambelovsky/gosf"
+	gosocketio "github.com/ambelovsky/gosf-socketio"
+	"github.com/ambelovsky/gosf-socketio/transport"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/websocket/v2"
+)
+
+func Routes() {
+	app := fiber.New()
+
+	app.Use(logger.New())
+	app.Use(recover.New())
+	app.Use(cors.New())
+
+	// Setup the middleware to retrieve the data sent in first GET request
+	app.Use(func(c *fiber.Ctx) error {
+		// IsWebSocketUpgrade returns true if the client
+		// requested upgrade to the WebSocket protocol.
+		if websocket.IsWebSocketUpgrade(c) {
+			c.Locals("allowed", true)
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"message": "Hello, World!",
+		})
+	})
+
+	gosf.Listen()
+
+	app.Get("/socket.io/", WsHandler)
+
+	port := os.Getenv("APP_PORT")
+	log.Println("Listening on port : ", port)
+	app.Listen(":" + port)
+}
+
+type Message struct {
+	Name    string `json:"name"`
+	Message string `json:"message"`
+}
+
+func WsHandler(c *fiber.Ctx) error {
+	server := gosocketio.NewServer(transport.GetDefaultWebsocketTransport())
+
+	//handle connected
+	server.On(gosocketio.OnConnection, func(c *gosocketio.Channel) {
+		log.Println("New client connected")
+		//join them to room
+		// c.Join("chat")
+	})
+
+	server.On(gosocketio.OnDisconnection, func(c *gosocketio.Channel) {
+		log.Println("Disconnected")
+	})
+
+	return nil
+}
+
+func echo(client *gosf.Client, request *gosf.Request) *gosf.Message {
+	return gosf.NewSuccessMessage(request.Message.Text)
+}

@@ -1,0 +1,7 @@
+.env
+*.exe
+/bin/*.exe
+/bin/main
+
+.dll
+.sys
