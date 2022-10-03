@@ -168,7 +168,7 @@ func Routes(app *fiber.App) {
 	// app.Listen(":" + port)
 
 	// Create tls certificate
-	cer, err := tls.LoadX509KeyPair("./go-server.cert", "./go-server.key")
+	cer, err := tls.LoadX509KeyPair("../../go-server.cert", "../../go-server.key")
 	if err != nil {
 		log.Fatal(err)
 	}
