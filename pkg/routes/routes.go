@@ -162,7 +162,7 @@ func Routes(app *fiber.App) {
 		kws.Emit(jsonResponse, ikisocket.TextMessage)
 	}))
 
-	port := os.Getenv("APP_PORT")
+	port := ":" + os.Getenv("APP_PORT")
 	log.Println("Listening on port : ", port)
 	app.Listen(":" + port)
 }
