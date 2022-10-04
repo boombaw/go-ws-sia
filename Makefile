@@ -18,6 +18,8 @@ start:
 stop:
 	@supervisorctl stop $(appname)
 
+restart: stop start
+
 createlog:
 	@touch /var/log/$(appname).log
 
