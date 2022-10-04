@@ -44,6 +44,8 @@ func Routes(app *fiber.App) {
 
 	// Setup the middleware to retrieve the data sent in first GET request
 	app.Use(func(c *fiber.Ctx) error {
+		log.Println("Host", c.Get("host"))
+
 		// log.Println(websocket.IsWebSocketUpgrade(c))
 		// IsWebSocketUpgrade returns true if the client
 		// requested upgrade to the WebSocket protocol.
@@ -65,11 +67,11 @@ func Routes(app *fiber.App) {
 		return c.Status(403).SendString("Request origin not allowed")
 	})
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"message": "Hello, World!",
-		})
-	})
+	// app.Get("/", func(c *fiber.Ctx) error {
+	// 	return c.JSON(fiber.Map{
+	// 		"message": "Hello, World!",
+	// 	})
+	// })
 
 	// Multiple event handling supported
 	ikisocket.On(ikisocket.EventConnect, func(ep *ikisocket.EventPayload) {
