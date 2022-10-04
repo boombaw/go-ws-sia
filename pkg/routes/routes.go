@@ -61,7 +61,7 @@ func Routes(app *fiber.App) {
 		return c.SendStatus(fiber.StatusUpgradeRequired)
 	})
 
-	app.Use("/ws:id", func(c *fiber.Ctx) error {
+	app.Use("/ws/:id", func(c *fiber.Ctx) error {
 		log.Println("Host", c.Get("host"))
 		if c.Get("host") == "ws.ubharajaya.ac.id" {
 			c.Locals("Host", "ws.ubharajaya.ac.id")
