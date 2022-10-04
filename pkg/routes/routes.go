@@ -44,15 +44,16 @@ func Routes(app *fiber.App) {
 
 	// Setup the middleware to retrieve the data sent in first GET request
 	app.Use(func(c *fiber.Ctx) error {
-		log.Println(websocket.IsWebSocketUpgrade(c))
+		// log.Println(websocket.IsWebSocketUpgrade(c))
 		// IsWebSocketUpgrade returns true if the client
 		// requested upgrade to the WebSocket protocol.
 		if websocket.IsWebSocketUpgrade(c) {
-			c.Locals("allowed", true)
+			// c.Locals("allowed", true)
 			return c.Next()
 		}
 		log.Printf("Error Upgrade %v", c)
-		return fiber.ErrUpgradeRequired
+		// return fiber.ErrUpgradeRequired
+		return c.SendStatus(fiber.StatusUpgradeRequired)
 	})
 
 	app.Get("/", func(c *fiber.Ctx) error {
