@@ -6,14 +6,15 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/antoniodipinto/ikisocket"
 	"github.com/boombaw/go-ws-sia/pkg/external/feeder"
 
-	// "github.com/boombaw/go-ws-sia/pkg/http/akm/action"
-
 	akm "github.com/boombaw/go-ws-sia/pkg/http/akm/action"
+	kelas "github.com/boombaw/go-ws-sia/pkg/http/kelas/action"
 	mhs "github.com/boombaw/go-ws-sia/pkg/http/mhs/action"
+	nilai "github.com/boombaw/go-ws-sia/pkg/http/nilai/action"
 	"github.com/boombaw/go-ws-sia/pkg/model"
 	"github.com/boombaw/go-ws-sia/pkg/repository"
 	"github.com/boombaw/go-ws-sia/pkg/util"
@@ -43,12 +44,14 @@ func Routes(app *fiber.App) {
 
 	// Setup the middleware to retrieve the data sent in first GET request
 	app.Use(func(c *fiber.Ctx) error {
+		log.Println(websocket.IsWebSocketUpgrade(c))
 		// IsWebSocketUpgrade returns true if the client
 		// requested upgrade to the WebSocket protocol.
 		if websocket.IsWebSocketUpgrade(c) {
 			c.Locals("allowed", true)
 			return c.Next()
 		}
+		log.Printf("Error Upgrade %v", c)
 		return fiber.ErrUpgradeRequired
 	})
 
@@ -104,6 +107,8 @@ func Routes(app *fiber.App) {
 			SyncAkm(ep, message)
 		case "sync-akm-na":
 			SyncAkmNA(ep, message)
+		case "sync-update-nilai":
+			SyncUpdateNilai(ep, message)
 		}
 
 	})
@@ -164,7 +169,7 @@ func Routes(app *fiber.App) {
 
 	port := ":" + os.Getenv("APP_PORT")
 	log.Println("Listening on port : ", port)
-	app.Listen(":" + port)
+	app.Listen(port)
 }
 
 type ParamsAKM struct {
@@ -296,9 +301,6 @@ func SyncAkm(ep *ikisocket.EventPayload, message model.MessageObject) {
 				// 	log.Println("Error update status sync akm ", err.Error())
 				// }
 			}
-
-			// filter := `nim ~* '` + akm.NPM + `'`
-			// action.SyncAKMService(tokenFeeder.Data["token"].(string), filter)
 		} else {
 			response.Event = "error"
 			response.Message = "Gagal Mendapatkan Token Feeder"
@@ -465,6 +467,302 @@ func SyncAkmNA(ep *ikisocket.EventPayload, message model.MessageObject) {
 	}
 }
 
+func SyncAkmDO(ep *ikisocket.EventPayload, message model.MessageObject) {
+	var response model.MessageResponse
+
+	var paramAKM ParamsAKM
+	err := json.Unmarshal([]byte(message.Data), &paramAKM)
+	if err != nil {
+		fmt.Println("Error marshalling json :", err)
+		return
+	}
+
+	response = akm.ListAKMDOService(paramAKM.KdProdi, paramAKM.Semester)
+
+	type ListAkmJson struct {
+		List []struct {
+			model.MhsDO
+		} `json:"list"`
+	}
+
+	var data ListAkmJson
+	_ = json.Unmarshal([]byte(response.Message), &data)
+
+	total := []byte(`{"total" : %v}`)
+	response.Event = "total"
+	response.Message = fmt.Sprintf(string(total), len(data.List))
+
+	if ep.Kws.IsAlive() {
+		err = ep.Kws.EmitTo(clients[message.To], util.ToJson(response), ikisocket.TextMessage)
+		if err != nil {
+			fmt.Println(err)
+		}
+	} else {
+		ep.Kws.Close()
+	}
+
+	for i, v := range data.List {
+		tokenFeeder := feeder.GetToken()
+
+		if tokenFeeder.ErrorCode == 0 {
+
+			var last_akm_param repository.LastAkmParams
+			last_akm_param.Npm = v.NPM
+
+			last_akm, err := repository.NewAKMRepository().LastAKM(last_akm_param)
+
+			if err != nil {
+				response.Event = "error"
+				response.Message = err.Error()
+			}
+
+			id_registrasi_mahasiwa, err := get_id_registrasi(tokenFeeder.Data["token"].(string), v.NPM, paramAKM)
+			if err != nil {
+				response.Event = "error"
+				response.Message = err.Error()
+			}
+
+			ips, _ := strconv.ParseFloat("0", 64)
+			ipk, _ := strconv.ParseFloat(last_akm.Ipk, 64)
+			sks, _ := strconv.ParseFloat("0", 64)
+			total_sks, _ := strconv.ParseFloat(last_akm.TotalSks, 64)
+			biaya, _ := strconv.ParseInt(last_akm.Biaya, 10, 32)
+
+			arg := model.FeederParams{
+				Token: tokenFeeder.Data["token"].(string),
+				Data: map[string]interface{}{
+					"key": map[string]interface{}{
+						"id_registrasi_mahasiswa": id_registrasi_mahasiwa,
+						"id_semester":             paramAKM.Semester,
+					},
+					"record": map[string]interface{}{
+						"id_status_mahasiswa": "N",
+						"ips":                 ips,
+						"ipk":                 ipk,
+						"sks_semester":        sks,
+						"total_sks":           total_sks,
+						"biaya_kuliah_smt":    biaya,
+					},
+				},
+			}
+
+			updateAkm, err := akm.NewSyncAKM().UpdateAKM(arg)
+
+			if err != nil {
+				response.Event = "error"
+				response.Message = err.Error()
+			}
+
+			if updateAkm.ErrorCode != 0 {
+				response.Event = message.Event
+
+				updateAkm.Data["name"] = v.Name
+				updateAkm.Data["npm"] = v.NPM
+				updateAkm.Data["status"] = `<span class="badge rounded-pill bg-danger " style="font-size:0.8rem !important">Gagal</span>`
+				updateAkm.Data["order"] = i + 1
+
+				data := fiber.Map{
+					"error_code": updateAkm.ErrorCode,
+					"error_desc": updateAkm.ErrorDesc,
+					"list":       updateAkm.Data,
+				}
+
+				response.Message = string(util.ToJson(data))
+			} else {
+				response.Event = message.Event
+
+				updateAkm.Data["name"] = v.Name
+				updateAkm.Data["npm"] = v.NPM
+				updateAkm.Data["status"] = `<span class="badge rounded-pill bg-success " style="font-size:0.8rem !important">Behasil</span>`
+				updateAkm.Data["order"] = i + 1
+
+				data := fiber.Map{
+					"error_code": updateAkm.ErrorCode,
+					"error_desc": updateAkm.ErrorDesc,
+					"list":       updateAkm.Data,
+				}
+				response.Message = string(util.ToJson(data))
+
+				// only in feeder live not in sandbox
+				// var p repository.UpdateSyncParams
+				// p.ID, _ = strconv.Atoi(v.ID)
+				// err = repository.NewAKMRepository().UpdateHasSync(p)
+
+				// if err != nil {
+				// 	log.Println("Error update status sync akm ", err.Error())
+				// }
+			}
+
+			// filter := `nim ~* '` + akm.NPM + `'`
+			// action.SyncAKMService(tokenFeeder.Data["token"].(string), filter)
+		} else {
+			response.Event = "error"
+			response.Message = "Gagal Mendapatkan Token Feeder"
+		}
+
+		if ep.Kws.IsAlive() {
+			// Emit the message directly to specified user
+			err = ep.Kws.EmitTo(clients[message.To], util.ToJson(response), ikisocket.TextMessage)
+			if err != nil {
+				fmt.Println(err)
+			}
+		} else {
+			ep.Kws.Close()
+		}
+
+		// time.Sleep(1 * time.Second)
+	}
+}
+
+type ParamsNilai struct {
+	KdJadwal     string `json:"kd_jadwal"`
+	KdProdi      string `json:"kd_prodi"`
+	KdMatakuliah string `json:"kd_matakuliah"`
+	Kelas        string `json:"kelas"`
+	Semester     string `json:"semester"`
+}
+
+func SyncUpdateNilai(ep *ikisocket.EventPayload, message model.MessageObject) {
+	var response model.MessageResponse
+
+	var paramNilai ParamsNilai
+	err := json.Unmarshal([]byte(message.Data), &paramNilai)
+	if err != nil {
+		fmt.Println("Error marshalling json :", err)
+		return
+	}
+
+	response = nilai.ListTransaksiNilai(paramNilai.KdJadwal)
+
+	type ListNilaiJson struct {
+		List []struct {
+			model.SyncNilai
+		} `json:"list"`
+	}
+
+	var data ListNilaiJson
+	_ = json.Unmarshal([]byte(response.Message), &data)
+
+	total := []byte(`{"total" : %v}`)
+	response.Event = "total"
+	response.Message = fmt.Sprintf(string(total), len(data.List))
+
+	if ep.Kws.IsAlive() {
+		err = ep.Kws.EmitTo(clients[message.To], util.ToJson(response), ikisocket.TextMessage)
+		if err != nil {
+			fmt.Println(err)
+		}
+	} else {
+		ep.Kws.Close()
+	}
+
+	type ListJadwalJson struct {
+		List []struct {
+			model.Jadwal
+		} `json:"list"`
+	}
+	jadwal := nilai.ListJadwal(paramNilai.KdJadwal)
+
+	var dataJadwal ListJadwalJson
+	_ = json.Unmarshal([]byte(jadwal.Message), &dataJadwal)
+
+	paramNilai.KdMatakuliah = dataJadwal.List[0].KdMatakuliah
+	paramNilai.Kelas = dataJadwal.List[0].Kelas
+	paramNilai.Semester = dataJadwal.List[0].TahunAjaran
+
+	tokenFeeder := feeder.GetToken()
+
+	if tokenFeeder.ErrorCode != 0 {
+		response.Event = "error"
+		response.Message = "Gagal Mendapatkan Token Feeder"
+	}
+
+	id_kelas_kuliah, err := get_id_kelas(tokenFeeder.Data["token"].(string), paramNilai)
+
+	if err != nil {
+		response.Event = "error"
+		response.Message = "Gagal Mendapatkan Id Kelas Kuliah"
+	}
+
+	for i, v := range data.List {
+
+		var paramAKM ParamsAKM
+		paramAKM.Semester = paramNilai.Semester
+
+		id_registrasi_mahasiwa, err := get_id_registrasi(tokenFeeder.Data["token"].(string), v.NPM, paramAKM)
+		if err != nil {
+			response.Event = "error"
+			response.Message = err.Error()
+		}
+
+		arg := model.FeederParams{
+			Token: tokenFeeder.Data["token"].(string),
+			Data: map[string]interface{}{
+				"key": map[string]interface{}{
+					"id_registrasi_mahasiswa": id_registrasi_mahasiwa,
+					"id_kelas_kuliah":         id_kelas_kuliah,
+				},
+				"record": map[string]interface{}{
+					"nilai_angka":  fmt.Sprintf("%v", v.NilaiAkhir),
+					"nilai_huruf":  v.NilaiIndeks,
+					"nilai_indeks": fmt.Sprintf("%f", v.Bobot),
+				},
+			},
+		}
+
+		updateNilai, err := nilai.NewSyncNilai().UpdateNilai(arg)
+
+		if err != nil {
+			response.Event = "error"
+			response.Message = err.Error()
+		}
+
+		updateNilai.Data["name"] = v.Name
+		updateNilai.Data["npm"] = v.NPM
+		updateNilai.Data["order"] = i + 1
+		updateNilai.Data["kd_matakuliah"] = v.KdMatakuliah
+		updateNilai.Data["nilai_indeks"] = v.NilaiIndeks
+		updateNilai.Data["nilai_akhir"] = v.NilaiAkhir
+
+		if updateNilai.ErrorCode != 0 {
+			response.Event = message.Event
+
+			updateNilai.Data["status"] = `<span class="badge rounded-pill bg-danger " style="font-size:0.8rem !important">Gagal</span>`
+
+			data := fiber.Map{
+				"error_code": updateNilai.ErrorCode,
+				"error_desc": updateNilai.ErrorDesc,
+				"list":       updateNilai.Data,
+			}
+
+			response.Message = string(util.ToJson(data))
+		} else {
+			response.Event = message.Event
+
+			updateNilai.Data["status"] = `<span class="badge rounded-pill bg-success " style="font-size:0.8rem !important">Behasil</span>`
+
+			data := fiber.Map{
+				"error_code": updateNilai.ErrorCode,
+				"error_desc": updateNilai.ErrorDesc,
+				"list":       updateNilai.Data,
+			}
+			response.Message = string(util.ToJson(data))
+		}
+
+		if ep.Kws.IsAlive() {
+			// Emit the message directly to specified user
+			err = ep.Kws.EmitTo(clients[message.To], util.ToJson(response), ikisocket.TextMessage)
+			if err != nil {
+				fmt.Println(err)
+			}
+		} else {
+			ep.Kws.Close()
+		}
+
+		// time.Sleep(1 * time.Second)
+	}
+}
+
 func get_status_akm(token string, npm string, param ParamsAKM) (string, error) {
 
 	var arg model.FeederParams
@@ -503,5 +801,35 @@ func get_id_registrasi(token string, npm string, param ParamsAKM) (string, error
 	}
 
 	return r.IDRegistrasiMahasiswa, nil
+
+}
+
+func get_id_kelas(token string, param ParamsNilai) (string, error) {
+
+	var arg model.FeederParams
+	arg.Token = token
+	arg.Sms = repository.NewSmsProdiRepository().SMSProdi(repository.SmsParams{KdProdi: param.KdProdi})
+
+	var filter string
+
+	filter = " id_prodi ='" + arg.Sms + "'"
+	filter += " AND kode_mata_kuliah = '" + strings.ReplaceAll(strings.TrimSpace(param.KdMatakuliah), "-", "") + "'"
+	filter += " AND nama_kelas_kuliah = '" + strings.ReplaceAll(strings.TrimSpace(param.Kelas), "-", "") + "'"
+	filter += " AND id_semester = '" + param.Semester + "'"
+
+	arg.Data = map[string]interface{}{
+		"filter": filter,
+		"limit":  "1",
+		"order":  "",
+	}
+
+	k := kelas.NewListKelas()
+
+	r, err := k.List(arg)
+	if err != nil {
+		return "", err
+	}
+
+	return r.IDKelasKuliah, nil
 
 }

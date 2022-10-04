@@ -17,10 +17,14 @@ type MhsNA struct {
 	NPM  string `json:"npm" db:"npm"`
 }
 
-type FeederParams struct {
-	Token string                 `json:"token"`
-	Sms   string                 `json:"sms"`
-	Data  map[string]interface{} `json:"data"`
+type MhsDO struct {
+	ID          string `json:"id" db:"id"`
+	Skep        string `json:"skep" db:"skep"`
+	TglSkep     string `json:"tgl_skep" db:"tgl_skep"`
+	NPM         string `json:"npm" db:"npm"`
+	Name        string `json:"name" db:"name"`
+	Alasan      string `json:"alasan" db:"alasan"`
+	TahunAjaran string `json:"tahun_ajaran" db:"tahun_ajaran"`
 }
 
 type FeederAKM struct {

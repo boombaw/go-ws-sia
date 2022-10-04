@@ -4,7 +4,7 @@ run:
 	@go run cmd/server/main.go
 
 build:
-	@cd cmd/server; go build -o ../../bin/$(appname) && chmod +x ../../bin/$(appname)
+	@cd cmd/server && go build -o ../../bin/$(appname) && chmod +x ../../bin/$(appname)
 
 exec:
 	@./bin/$(appname)

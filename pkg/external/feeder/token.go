@@ -17,8 +17,8 @@ func GetToken() FeederResponse {
 
 	payload := Token{
 		Act:      GET_TOKEN,
-		Username: "031036",
-		Password: "Ubhara_j4y4@lldikti3",
+		Username: os.Getenv("FEEDER_USERNAME"),
+		Password: os.Getenv("FEEDER_PASSWORD"),
 	}
 
 	jsonPayload := string(util.ToJson(payload))

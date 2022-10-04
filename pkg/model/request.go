@@ -8,3 +8,9 @@ type MessageObject struct {
 	To    string `json:"to"`
 	SID   string `json:"uuid"`
 }
+
+type FeederParams struct {
+	Token string                 `json:"token"`
+	Sms   string                 `json:"sms"`
+	Data  map[string]interface{} `json:"data"`
+}

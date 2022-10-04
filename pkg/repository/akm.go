@@ -67,6 +67,32 @@ func (l *akmRepository) ListNA(arg AkmParams) ([]model.MhsNA, error) {
 	return akm, nil
 }
 
+func (l *akmRepository) ListDO(arg AkmParams) ([]model.MhsDO, error) {
+
+	var db = database.Conn()
+	var akm []model.MhsDO
+
+	// var actyear model.Actyear
+	// db.Raw(query.GetActYear).Scan(&actyear)
+
+	s, _ := strconv.Atoi(arg.Semester)
+
+	studyStart := util.StudyStart(s)
+
+	/**
+	param 1 = kd_prodi
+	param 2 = actyear
+	param 3 = kd_prodi
+	param 4 = actyear
+	param 5 = study start
+	param 6 = actyear
+	*/
+
+	db.Raw(query.SelectNA, arg.KdProdi, arg.Semester, arg.KdProdi, arg.Semester, studyStart, arg.Semester).Scan(&akm)
+
+	return akm, nil
+}
+
 type LastAkmParams struct {
 	Npm string `json:"npm"`
 }

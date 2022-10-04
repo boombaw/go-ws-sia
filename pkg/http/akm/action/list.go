@@ -61,3 +61,30 @@ func ListAKMNAService(kdProdi string, semester string) model.MessageResponse {
 
 	return resp
 }
+
+func ListAKMDOService(kdProdi string, semester string) model.MessageResponse {
+	var resp model.MessageResponse
+
+	repo := repository.NewAKMRepository()
+
+	arg := repository.AkmParams{
+		KdProdi:  kdProdi,
+		Semester: semester,
+	}
+
+	akm, err := repo.ListDO(arg)
+
+	if err != nil {
+		resp.Event = "error"
+		resp.Message = err.Error()
+	}
+
+	data := fiber.Map{
+		"list": akm,
+	}
+
+	resp.Event = "list_do"
+	resp.Message = string(util.ToJson(data))
+
+	return resp
+}

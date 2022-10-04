@@ -52,3 +52,49 @@ var UpdateHasSync = `UPDATE
 						id = ? `
 
 var GetActYear = `SELECT kode FROM tbl_tahunakademik WHERE status = 1`
+
+var SelectListDO = `SELECT
+						id ,
+						skep ,
+						tgl_skep ,
+						npm_mahasiswa npm,
+						npm_to_nama_mhs(npm_mahasiswa) name,
+						alasan ,
+						tahunajaran tahun_ajaran
+					FROM
+						tbl_dropout td
+					WHERE  audit_user = ? AND tahunajaran = ?
+					ORDER BY
+						tahunajaran DESC`
+
+// F_Yw1AEgtHYhWgMfcx42VTrXxW5chg0MVKbcCO9e468AahuroUhz@DYC@_FgnRoz
+var GetNilaiAkhir = `
+					SELECT
+						DISTINCT ttn.id ,
+						ttn.THSMSTRLNM tahun_ajaran,
+						ttn.KDPSTTRLNM prodi,
+						ttn.NIMHSTRLNM npm,
+						npm_to_nama_mhs(NIMHSTRLNM) name,
+						ttn.KDKMKTRLNM kd_matakuliah,
+						ttn.BOBOTTRLNM bobot,
+						ttn.NLAKHTRLNM nilai_indeks,
+						ttn.nilai_akhir 
+					FROM
+						tbl_transaksi_nilai ttn
+					JOIN tbl_nilai_detail tnd ON 
+						ttn.kd_transaksi_nilai = tnd.kd_transaksi_nilai
+					WHERE
+						tnd.kd_jadwal = ?
+						AND tnd.tipe = 10 ;`
+
+var GetJadwal = `SELECT
+					id_jadwal id,
+					kd_jadwal ,
+					kd_matakuliah ,
+					kd_dosen ,
+					kelas ,
+					kd_tahunajaran tahun_ajaran
+				FROM
+					tbl_jadwal_matkul tjm
+				WHERE
+					kd_jadwal = ?`
