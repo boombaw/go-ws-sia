@@ -46,13 +46,14 @@ func Routes(app *fiber.App) {
 	app.Use(func(c *fiber.Ctx) error {
 		if c.Get("host") == "ws.ubharajaya.ac.id" {
 			c.Locals("Host", "ws.ubharajaya.ac.id")
+			c.Locals("allowed", true)
 			return c.Next()
 		}
 		// log.Println(websocket.IsWebSocketUpgrade(c))
 		// IsWebSocketUpgrade returns true if the client
 		// requested upgrade to the WebSocket protocol.
 		if websocket.IsWebSocketUpgrade(c) {
-			// c.Locals("allowed", true)
+			c.Locals("allowed", true)
 			return c.Next()
 		}
 
@@ -64,6 +65,7 @@ func Routes(app *fiber.App) {
 	app.Use("/ws/:id", func(c *fiber.Ctx) error {
 		log.Println("Host", c.Get("host"))
 		if c.Get("host") == "ws.ubharajaya.ac.id" {
+			c.Locals("allowed", true)
 			c.Locals("Host", "ws.ubharajaya.ac.id")
 			return c.Next()
 		}
