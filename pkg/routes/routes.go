@@ -43,40 +43,32 @@ func Routes(app *fiber.App) {
 	app.Use(cors.New())
 
 	// Setup the middleware to retrieve the data sent in first GET request
-	app.Use(func(c *fiber.Ctx) error {
-		if c.Get("host") == "ws.ubharajaya.ac.id" {
-			c.Locals("Host", "ws.ubharajaya.ac.id")
-			c.Locals("allowed", true)
-			return c.Next()
-		}
-		// log.Println(websocket.IsWebSocketUpgrade(c))
-		// IsWebSocketUpgrade returns true if the client
-		// requested upgrade to the WebSocket protocol.
+	// app.Use(func(c *fiber.Ctx) error {
+	// 	if c.Get("host") == "ws.ubharajaya.ac.id" {
+	// 		c.Locals("Host", "ws.ubharajaya.ac.id")
+	// 		c.Locals("allowed", true)
+	// 		return c.Next()
+	// 	}
+	// 	// log.Println(websocket.IsWebSocketUpgrade(c))
+	// 	// IsWebSocketUpgrade returns true if the client
+	// 	// requested upgrade to the WebSocket protocol.
+	// 	if websocket.IsWebSocketUpgrade(c) {
+	// 		c.Locals("allowed", true)
+	// 		return c.Next()
+	// 	}
+
+	// 	log.Printf("Error Upgrade %v", c)
+	// 	// return fiber.ErrUpgradeRequired
+	// 	return c.SendStatus(fiber.StatusUpgradeRequired)
+	// })
+
+	app.Use("/ws/", func(c *fiber.Ctx) error {
 		if websocket.IsWebSocketUpgrade(c) {
 			c.Locals("allowed", true)
 			return c.Next()
 		}
-
-		log.Printf("Error Upgrade %v", c)
-		// return fiber.ErrUpgradeRequired
-		return c.SendStatus(fiber.StatusUpgradeRequired)
-	})
-
-	app.Use("/ws/:id", func(c *fiber.Ctx) error {
-		log.Println("Host", c.Get("host"))
-		if c.Get("host") == "ws.ubharajaya.ac.id" {
-			c.Locals("allowed", true)
-			c.Locals("Host", "ws.ubharajaya.ac.id")
-			return c.Next()
-		}
-
-		if websocket.IsWebSocketUpgrade(c) {
-			c.Locals("allowed", true)
-			return c.Next()
-		}
-
-		log.Println("IsWebSocketUpgrade", websocket.IsWebSocketUpgrade(c))
-		return c.Status(403).SendString("Request origin not allowed")
+		log.Printf("Error Upgrade : %+v", fiber.ErrUpgradeRequired)
+		return fiber.ErrUpgradeRequired
 	})
 
 	// app.Get("/", func(c *fiber.Ctx) error {
@@ -165,6 +157,11 @@ func Routes(app *fiber.App) {
 	})
 
 	app.Get("/ws/:id", ikisocket.New(func(kws *ikisocket.Websocket) {
+
+		log.Println(kws.Locals("allowed"))  // true
+		log.Println(kws.Params("id"))       // 123
+		log.Println(kws.Query("v"))         // 1.0
+		log.Println(kws.Cookies("session")) // ""
 
 		// Retrieve the user id from endpoint
 		userId := kws.Params("id")
