@@ -67,6 +67,12 @@ func Routes(app *fiber.App) {
 			c.Locals("Host", "ws.ubharajaya.ac.id")
 			return c.Next()
 		}
+
+		if websocket.IsWebSocketUpgrade(c) {
+			// c.Locals("allowed", true)
+			return c.Next()
+		}
+
 		log.Println("IsWebSocketUpgrade", websocket.IsWebSocketUpgrade(c))
 		return c.Status(403).SendString("Request origin not allowed")
 	})
