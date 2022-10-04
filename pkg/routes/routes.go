@@ -44,7 +44,6 @@ func Routes(app *fiber.App) {
 
 	// Setup the middleware to retrieve the data sent in first GET request
 	app.Use(func(c *fiber.Ctx) error {
-		log.Println("Host", c.Get("host"))
 		if c.Get("host") == "ws.ubharajaya.ac.id" {
 			c.Locals("Host", "ws.ubharajaya.ac.id")
 			return c.Next()
@@ -56,6 +55,7 @@ func Routes(app *fiber.App) {
 			// c.Locals("allowed", true)
 			return c.Next()
 		}
+		log.Println("IsWebSocketUpgrade", websocket.IsWebSocketUpgrade(c))
 		log.Printf("Error Upgrade %v", c)
 		// return fiber.ErrUpgradeRequired
 		return c.SendStatus(fiber.StatusUpgradeRequired)
