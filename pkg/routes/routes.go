@@ -56,6 +56,15 @@ func Routes(app *fiber.App) {
 		return c.SendStatus(fiber.StatusUpgradeRequired)
 	})
 
+	app.Use("/ws", func(c *fiber.Ctx) error {
+		log.Println("Host", c.Get("host"))
+		if c.Get("host") == "localhost:3003" {
+			c.Locals("Host", "Localhost:3003")
+			return c.Next()
+		}
+		return c.Status(403).SendString("Request origin not allowed")
+	})
+
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"message": "Hello, World!",
