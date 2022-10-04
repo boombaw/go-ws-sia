@@ -55,7 +55,7 @@ func Routes(app *fiber.App) {
 			// c.Locals("allowed", true)
 			return c.Next()
 		}
-		log.Println("IsWebSocketUpgrade", websocket.IsWebSocketUpgrade(c))
+
 		log.Printf("Error Upgrade %v", c)
 		// return fiber.ErrUpgradeRequired
 		return c.SendStatus(fiber.StatusUpgradeRequired)
@@ -67,6 +67,7 @@ func Routes(app *fiber.App) {
 			c.Locals("Host", "ws.ubharajaya.ac.id")
 			return c.Next()
 		}
+		log.Println("IsWebSocketUpgrade", websocket.IsWebSocketUpgrade(c))
 		return c.Status(403).SendString("Request origin not allowed")
 	})
 
