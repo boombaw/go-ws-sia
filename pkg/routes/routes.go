@@ -69,7 +69,7 @@ func Routes(app *fiber.App) {
 		}
 
 		if websocket.IsWebSocketUpgrade(c) {
-			// c.Locals("allowed", true)
+			c.Locals("allowed", true)
 			return c.Next()
 		}
 
