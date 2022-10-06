@@ -8,4 +8,5 @@ const (
 	UPDATE_LIST_KULIAH_MHS     = "UpdatePerkuliahanMahasiswa"
 	GET_LIST_KELAS             = "GetListKelasKuliah"
 	UPDATE_NILAI_KELAS         = "UpdateNilaiPerkuliahanKelas"
+	INSERT_LULUS_DO            = "InsertMahasiswaLulusDO"
 )

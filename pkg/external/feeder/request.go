@@ -14,6 +14,12 @@ type Token struct {
 	Password string `json:"password"`
 }
 
+type PostPayload struct {
+	Act   string `json:"act"`
+	Token string `json:"token"`
+	Record
+}
+
 type PutPayload struct {
 	Act    string                 `json:"act"`
 	Token  string                 `json:"token"`

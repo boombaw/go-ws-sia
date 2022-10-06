@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -13,11 +12,13 @@ import (
 
 	akm "github.com/boombaw/go-ws-sia/pkg/http/akm/action"
 	kelas "github.com/boombaw/go-ws-sia/pkg/http/kelas/action"
+	lulusan "github.com/boombaw/go-ws-sia/pkg/http/lulusan/action"
 	mhs "github.com/boombaw/go-ws-sia/pkg/http/mhs/action"
 	nilai "github.com/boombaw/go-ws-sia/pkg/http/nilai/action"
 	"github.com/boombaw/go-ws-sia/pkg/model"
 	"github.com/boombaw/go-ws-sia/pkg/repository"
 	"github.com/boombaw/go-ws-sia/pkg/util"
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -30,6 +31,7 @@ import (
 var (
 	clients = make(map[string]string)
 	// wsChan  = make(chan model.MessageObject)
+	json = jsoniter.ConfigCompatibleWithStandardLibrary
 )
 
 type UserSocketID struct {
@@ -120,11 +122,13 @@ func Routes(app *fiber.App) {
 
 		switch message.Event {
 		case "sync-akm":
-			SyncAkm(ep, message)
+			go SyncAkm(ep, message)
 		case "sync-akm-na":
-			SyncAkmNA(ep, message)
+			go SyncAkmNA(ep, message)
 		case "sync-update-nilai":
-			SyncUpdateNilai(ep, message)
+			go SyncUpdateNilai(ep, message)
+		case "sync-insert-lulusan":
+			go SyncInsertLulusan(ep, message)
 		}
 
 	})
@@ -781,6 +785,121 @@ func SyncUpdateNilai(ep *ikisocket.EventPayload, message model.MessageObject) {
 		}
 
 		// time.Sleep(1 * time.Second)
+	}
+}
+
+type ParamsLulusan struct {
+	KdProdi  string `json:"kd_prodi"`
+	Semester string `json:"semester"`
+}
+
+func SyncInsertLulusan(ep *ikisocket.EventPayload, message model.MessageObject) {
+	var response model.MessageResponse
+	var paramLulusan ParamsLulusan
+	err := json.Unmarshal([]byte(message.Data), &paramLulusan)
+	if err != nil {
+		fmt.Println("Error marshalling json :", err)
+		return
+	}
+
+	response = lulusan.ListLulusan(paramLulusan.KdProdi, paramLulusan.Semester)
+
+	type ListLulusanJson struct {
+		List []struct {
+			model.SyncLulusan
+		} `json:"list"`
+	}
+
+	var data ListLulusanJson
+	_ = json.Unmarshal([]byte(response.Message), &data)
+
+	total := []byte(`{"total" : %v}`)
+	response.Event = "total"
+	response.Message = fmt.Sprintf(string(total), len(data.List))
+
+	if ep.Kws.IsAlive() {
+		err = ep.Kws.EmitTo(clients[message.To], util.ToJson(response), ikisocket.TextMessage)
+		if err != nil {
+			fmt.Println(err)
+		}
+	} else {
+		ep.Kws.Close()
+	}
+
+	tokenFeeder := feeder.GetToken()
+
+	if tokenFeeder.ErrorCode != 0 {
+		response.Event = "error"
+		response.Message = "Gagal Mendapatkan Token Feeder"
+	}
+
+	for i, v := range data.List {
+		var paramAKM ParamsAKM
+		paramAKM.Semester = paramLulusan.Semester
+		paramAKM.KdProdi = paramLulusan.KdProdi
+
+		id_registrasi_mahasiwa, err := get_id_registrasi(tokenFeeder.Data["token"].(string), v.NpmMahasiswa, paramAKM)
+		if err != nil {
+			response.Event = "error"
+			response.Message = err.Error()
+		}
+
+		arg := model.FeederParams{
+			Token: tokenFeeder.Data["token"].(string),
+			Data: map[string]interface{}{
+				"record": map[string]interface{}{
+					"id_registrasi_mahasiswa": id_registrasi_mahasiwa,
+					"id_jenis_keluar":         "1",
+					"id_periode_keluar":       v.TaLulus,
+					"tanggal_keluar":          v.TglLulus,
+					"keterangan":              "",
+					"nomor_sk_yudisium":       v.SkYudisium,
+					"tanggal_sk_yudisium":     v.TglYudisium,
+					"ipk":                     v.Ipk,
+					"nomor_ijazah":            v.NoIjazah,
+					"jalur_skripsi":           1,
+					"judul_skripsi":           v.JdlSkripsi,
+					"bulan_awal_bimbingan":    v.MulaiBim,
+					"bulan_akhir_bimbingan":   v.AhirBim,
+				},
+			},
+		}
+
+		insertLulusan, err := lulusan.NewSyncLulusan().InsertLulusan(arg)
+		if err != nil {
+			response.Event = "error"
+			response.Message = err.Error()
+		}
+
+		insertLulusan.Data["npm"] = v.NpmMahasiswa
+		insertLulusan.Data["name"] = v.Name
+		insertLulusan.Data["order"] = i + 1
+
+		if insertLulusan.ErrorCode != 0 {
+			insertLulusan.Data["status"] = `<span class="badge rounded-pill bg-danger " style="font-size:0.8rem !important">Gagal</span>`
+		} else {
+			insertLulusan.Data["status"] = `<span class="badge rounded-pill bg-success " style="font-size:0.8rem !important">Behasil</span>`
+		}
+
+		data := fiber.Map{
+			"error_code": insertLulusan.ErrorCode,
+			"error_desc": insertLulusan.ErrorDesc,
+			"list":       insertLulusan.Data,
+		}
+
+		response.Event = "sync-insert-lulusan"
+		response.Message = string(util.ToJson(data))
+
+		if ep.Kws.IsAlive() {
+			// Emit the message directly to specified user
+			err = ep.Kws.EmitTo(clients[message.To], util.ToJson(response), ikisocket.TextMessage)
+			if err != nil {
+				fmt.Println(err)
+			}
+		} else {
+			ep.Kws.Close()
+		}
+
 	}
 }
 
