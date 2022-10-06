@@ -3,14 +3,17 @@ package query
 var SelectAKM = `SELECT
 						takm.id,
 						takm.NIMHSTRAKM npm,
-						npm_to_nama_mhs(takm.NIMHSTRAKM) name,
+						tm.NMMHSMSMHS AS name,
 						takm.NLIPSTRAKM ips,
 						takm.NLIPKTRAKM ipk,
 						takm.SKSEMTRAKM sks,
 						takm.SKSTTTRAKM total_sks,
 						takm.BIAYA biaya 
 					FROM
-						tbl_aktifitas_kuliah_mahasiswa takm WHERE takm.KDPSTTRAKM  = ? AND takm.THSMSTRAKM = ?`
+						tbl_aktifitas_kuliah_mahasiswa takm 
+					JOIN tbl_mahasiswa tm ON
+						tm.NIMHSMSMHS = takm.NIMHSTRAKM
+					WHERE takm.KDPSTTRAKM  = ? AND takm.THSMSTRAKM = ?`
 
 var SelectNA = `SELECT
 					DISTINCT tm.NIMHSMSMHS npm,

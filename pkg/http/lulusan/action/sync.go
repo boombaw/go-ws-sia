@@ -2,7 +2,6 @@ package action
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/boombaw/go-ws-sia/pkg/external/feeder"
@@ -38,7 +37,7 @@ func (a *syncLulusan) InsertLulusan(arg model.FeederParams) (feeder.FeederRespon
 	}
 
 	jsonPayload := string(util.ToJson(payload))
-	log.Printf("%+v", jsonPayload)
+
 	_, body, err := gorequest.New().Post(url).Send(jsonPayload).End()
 
 	_ = json.Unmarshal([]byte(body), &feederResponse)
