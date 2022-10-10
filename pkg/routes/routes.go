@@ -1017,8 +1017,6 @@ func idRegRedis(token string, npm string, param ParamsAKM) (string, error) {
 		idReg = id
 	}
 
-	redisClient.Close()
-
 	return idReg, nil
 }
 
@@ -1112,6 +1110,6 @@ func idKelasRedis(token string, param ParamsNilai) (string, error) {
 	}
 
 	log.Println("Berhasil mendapatkan id kelas dari redis")
-	redisClient.Close()
+
 	return idReg, nil
 }

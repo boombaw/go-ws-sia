@@ -58,6 +58,5 @@ func Set(key string, value string, db ...int) error {
 		return err
 	}
 
-	rdb.Close()
 	return nil
 }
