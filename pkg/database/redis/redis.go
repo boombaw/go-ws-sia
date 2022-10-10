@@ -37,11 +37,22 @@ func Set(key string, value string, db ...int) error {
 		return err
 	}
 
+	var expiration time.Duration
+
 	if len(db) > 0 {
 		rdb.Options().DB = db[0]
+
+		if db[1] == 0 {
+			expiration = 0
+		} else {
+			expiration = time.Duration(db[1]) * time.Second
+		}
+
+	} else {
+		expiration = 10 * time.Minute
 	}
 
-	err = rdb.Set(rdb.Context(), key, value, 10*time.Minute).Err()
+	err = rdb.Set(rdb.Context(), key, value, expiration).Err()
 
 	if err != nil {
 		return err

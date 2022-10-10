@@ -127,13 +127,13 @@ func Routes(app *fiber.App) {
 
 		switch message.Event {
 		case "sync-akm":
-			go SyncAkm(ep, message)
+			SyncAkm(ep, message)
 		case "sync-akm-na":
-			go SyncAkmNA(ep, message)
+			SyncAkmNA(ep, message)
 		case "sync-update-nilai":
-			go SyncUpdateNilai(ep, message)
+			SyncUpdateNilai(ep, message)
 		case "sync-insert-lulusan":
-			go SyncInsertLulusan(ep, message)
+			SyncInsertLulusan(ep, message)
 		}
 
 	})
@@ -997,7 +997,7 @@ func idRegRedis(token string, npm string, param ParamsAKM) (string, error) {
 
 		idReg = idFeeder
 
-		rdb.Set(npm, idReg)
+		rdb.Set(npm, idReg, 0, 259200) //259200 seconds => 3 days
 	}
 
 	id, err := redisClient.Get(ctx, npm).Result()
@@ -1009,7 +1009,7 @@ func idRegRedis(token string, npm string, param ParamsAKM) (string, error) {
 			return "", err
 		}
 
-		rdb.Set(npm, idFeeder)
+		rdb.Set(npm, idFeeder, 0, 259200) //259200 seconds => 3 days
 
 	} else if err != nil {
 		return "", errors.New("gagal Mendapatkan id registrasi " + npm)
@@ -1069,7 +1069,7 @@ func idKelasFeeder(token string, param ParamsNilai) (string, error) {
 
 	keyRedis := kelas
 
-	rdb.Set(keyRedis, r.IDKelasKuliah, 4)
+	rdb.Set(keyRedis, r.IDKelasKuliah, 4, 259200) //259200 seconds => 3 days
 
 	return r.IDKelasKuliah, nil
 }
@@ -1103,7 +1103,7 @@ func idKelasRedis(token string, param ParamsNilai) (string, error) {
 			return "", err
 		}
 
-		rdb.Set(keyRedis, idFeeder, 4)
+		rdb.Set(keyRedis, idFeeder, 4, 259200) //259200 seconds => 3 days
 
 	} else if err != nil {
 		return "", errors.New("gagal Mendapatkan id kelas " + keyRedis)
