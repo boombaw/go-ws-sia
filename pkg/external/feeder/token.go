@@ -49,11 +49,7 @@ func GetToken() FeederResponse {
 
 func tokenRedis() (string, error) {
 
-	redisClient, err := rdb.RedisConn()
-
-	if err != nil {
-		return "", err
-	}
+	redisClient := rdb.RedisDB
 
 	token, err := redisClient.Get(ctx, "token").Result()
 	if err == redis.Nil {
@@ -109,13 +105,9 @@ func tokenFeeder() (string, error) {
 
 func SetRedis(key, value string) {
 
-	redisClient, err := rdb.RedisConn()
+	redisClient := rdb.RedisDB
 
-	if err != nil {
-		return
-	}
-
-	err = redisClient.SetEX(ctx, key, value, 60*time.Second).Err()
+	err := redisClient.SetEX(ctx, key, value, 60*time.Second).Err()
 	if err != nil {
 		panic(err.Error())
 	}

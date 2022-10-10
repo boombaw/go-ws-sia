@@ -986,19 +986,7 @@ func idRegFeeder(token string, npm string, param ParamsAKM) (string, error) {
 func idRegRedis(token string, npm string, param ParamsAKM) (string, error) {
 	var idReg string
 
-	redisClient, err := rdb.RedisConn()
-
-	if err != nil {
-		idFeeder, err := idRegFeeder(token, npm, param)
-
-		if err != nil {
-			return "", err
-		}
-
-		idReg = idFeeder
-
-		rdb.Set(npm, idReg, 0, 259200) //259200 seconds => 3 days
-	}
+	redisClient := rdb.RedisDB
 
 	id, err := redisClient.Get(ctx, npm).Result()
 	if err == redis.Nil {
@@ -1075,22 +1063,11 @@ func idKelasFeeder(token string, param ParamsNilai) (string, error) {
 func idKelasRedis(token string, param ParamsNilai) (string, error) {
 	var idReg string
 
-	redisClient, err := rdb.RedisConn()
+	redisClient := rdb.RedisDB
 	redisClient.Options().DB = 4
 
 	smsProdi := repository.NewSmsProdiRepository().SMSProdi(repository.SmsParams{KdProdi: param.KdProdi})
 	keyRedis := smsProdi + "_" + strings.ReplaceAll(strings.TrimSpace(param.KdMatakuliah), "-", "") + "_" + strings.ReplaceAll(strings.TrimSpace(param.Kelas), "-", "") + "_" + param.Semester
-
-	if err != nil {
-		log.Println("error redis connetion", err.Error())
-		idFeeder, err := idKelasFeeder(token, param)
-
-		if err != nil {
-			return "", err
-		}
-
-		rdb.Set(keyRedis, idFeeder, 4)
-	}
 
 	id, err := redisClient.Get(ctx, keyRedis).Result()
 	if err == redis.Nil {
