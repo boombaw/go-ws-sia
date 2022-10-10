@@ -30,19 +30,23 @@ func RedisConn() (*redis.Client, error) {
 	return rdb, nil
 }
 
-func Set(key string, value string) error {
+func Set(key string, value string, db ...int) error {
 	rdb, err := RedisConn()
 
 	if err != nil {
 		return err
 	}
 
-	defer rdb.Close()
+	if len(db) > 0 {
+		rdb.Options().DB = db[0]
+	}
+
 	err = rdb.Set(rdb.Context(), key, value, 10*time.Minute).Err()
 
 	if err != nil {
 		return err
 	}
 
+	rdb.Close()
 	return nil
 }

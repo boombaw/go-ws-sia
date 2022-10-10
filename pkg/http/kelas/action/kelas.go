@@ -3,6 +3,7 @@ package action
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/boombaw/go-ws-sia/pkg/external/feeder"
 	"github.com/boombaw/go-ws-sia/pkg/model"
@@ -40,7 +41,7 @@ func (r *listKelas) List(arg model.FeederParams) (model.FeederListKelas, error) 
 
 	jsonPayload := string(util.ToJson(payload))
 
-	_, body, err := gorequest.New().Post(url).Send(jsonPayload).End()
+	_, body, err := gorequest.New().Timeout(5 * time.Minute).Post(url).Send(jsonPayload).End()
 
 	err2 := json.Unmarshal([]byte(body), &feederResponse)
 

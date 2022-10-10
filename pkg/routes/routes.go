@@ -151,26 +151,19 @@ func Routes(app *fiber.App) {
 	ikisocket.On(ikisocket.EventClose, func(ep *ikisocket.EventPayload) {
 		// Remove the user from the local clients
 		delete(clients, ep.Kws.GetStringAttribute("user_id"))
-		log.Printf("Close event - User: %s\n", ep.Kws.GetStringAttribute("user_id"))
-		ep.Kws.Close()
+		// log.Printf("Close event - User: %s\n", ep.Kws.GetStringAttribute("user_id"))
 	})
 
 	// On error event
 	ikisocket.On(ikisocket.EventError, func(ep *ikisocket.EventPayload) {
-		log.Printf("Error %s - User: %s\n", ep.Data, ep.Kws.GetStringAttribute("user_id"))
-		log.Printf("Error: %v\n", ep.Error)
+		// log.Printf("Error %s - User: %s\n", ep.Data, ep.Kws.GetStringAttribute("user_id"))
 		ep.Kws.Close()
-		ep.Kws.Fire("error", []byte("Error Connection"))
+		// ep.Kws.Fire("error", []byte("Error Connection"))
 		// Remove the user from the local clients
 		delete(clients, ep.Kws.GetStringAttribute("user_id"))
 	})
 
 	app.Get("/ws/:id", ikisocket.New(func(kws *ikisocket.Websocket) {
-
-		log.Println(kws.Locals("allowed"))  // true
-		log.Println(kws.Params("id"))       // 123
-		log.Println(kws.Query("v"))         // 1.0
-		log.Println(kws.Cookies("session")) // ""
 
 		// Retrieve the user id from endpoint
 		userId := kws.Params("id")
@@ -977,6 +970,9 @@ func idRegFeeder(token string, npm string, param ParamsAKM) (string, error) {
 		"order":  "id_periode_masuk DESC",
 	}
 
+	if npm == "201910315058" {
+		log.Println(string(util.ToJson(arg.Data)))
+	}
 	m := mhs.NewRiwayatPendidikan()
 
 	r, err := m.List(arg)
@@ -1004,8 +1000,6 @@ func idRegRedis(token string, npm string, param ParamsAKM) (string, error) {
 		rdb.Set(npm, idReg)
 	}
 
-	defer redisClient.Close()
-
 	id, err := redisClient.Get(ctx, npm).Result()
 	if err == redis.Nil {
 
@@ -1023,11 +1017,30 @@ func idRegRedis(token string, npm string, param ParamsAKM) (string, error) {
 		idReg = id
 	}
 
+	redisClient.Close()
+
 	return idReg, nil
 }
 
 func get_id_kelas(token string, param ParamsNilai) (string, error) {
 
+	idFeeder, err := idKelasRedis(token, param)
+
+	if err != nil || idFeeder == "" {
+		idFeeder, err := idKelasFeeder(token, param)
+
+		if err != nil || idFeeder == "" {
+			return "", err
+		}
+
+		return idFeeder, nil
+	}
+
+	return idFeeder, nil
+
+}
+
+func idKelasFeeder(token string, param ParamsNilai) (string, error) {
 	var arg model.FeederParams
 	arg.Token = token
 	arg.Sms = repository.NewSmsProdiRepository().SMSProdi(repository.SmsParams{KdProdi: param.KdProdi})
@@ -1052,6 +1065,53 @@ func get_id_kelas(token string, param ParamsNilai) (string, error) {
 		return "", err
 	}
 
-	return r.IDKelasKuliah, nil
+	kelas := arg.Sms + "_" + strings.ReplaceAll(strings.TrimSpace(param.KdMatakuliah), "-", "") + "_" + strings.ReplaceAll(strings.TrimSpace(param.Kelas), "-", "") + "_" + param.Semester
 
+	keyRedis := kelas
+
+	rdb.Set(keyRedis, r.IDKelasKuliah, 4)
+
+	return r.IDKelasKuliah, nil
+}
+
+func idKelasRedis(token string, param ParamsNilai) (string, error) {
+	var idReg string
+
+	redisClient, err := rdb.RedisConn()
+	redisClient.Options().DB = 4
+
+	smsProdi := repository.NewSmsProdiRepository().SMSProdi(repository.SmsParams{KdProdi: param.KdProdi})
+	keyRedis := smsProdi + "_" + strings.ReplaceAll(strings.TrimSpace(param.KdMatakuliah), "-", "") + "_" + strings.ReplaceAll(strings.TrimSpace(param.Kelas), "-", "") + "_" + param.Semester
+
+	if err != nil {
+		log.Println("error redis connetion", err.Error())
+		idFeeder, err := idKelasFeeder(token, param)
+
+		if err != nil {
+			return "", err
+		}
+
+		rdb.Set(keyRedis, idFeeder, 4)
+	}
+
+	id, err := redisClient.Get(ctx, keyRedis).Result()
+	if err == redis.Nil {
+
+		idFeeder, err := idKelasFeeder(token, param)
+
+		if err != nil {
+			return "", err
+		}
+
+		rdb.Set(keyRedis, idFeeder, 4)
+
+	} else if err != nil {
+		return "", errors.New("gagal Mendapatkan id kelas " + keyRedis)
+	} else {
+		idReg = id
+	}
+
+	log.Println("Berhasil mendapatkan id kelas dari redis")
+	redisClient.Close()
+	return idReg, nil
 }
