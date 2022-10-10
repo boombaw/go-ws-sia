@@ -715,91 +715,99 @@ func SyncUpdateNilai(ep *ikisocket.EventPayload, message model.MessageObject) {
 
 	id_kelas_kuliah, err := get_id_kelas(tokenFeeder.Data["token"].(string), paramNilai)
 
+	log.Println("id_kelas_kuliah  : ", id_kelas_kuliah)
+
 	if err != nil || id_kelas_kuliah == "" {
 		response.Event = "error"
 		response.Message = "Gagal Mendapatkan Id Kelas Kuliah"
-	}
 
-	for i, v := range data.List {
-
-		var paramAKM ParamsAKM
-		paramAKM.Semester = paramNilai.Semester
-		paramAKM.KdProdi = paramNilai.KdProdi
-
-		id_registrasi_mahasiwa, err := get_id_registrasi(tokenFeeder.Data["token"].(string), v.NPM, paramAKM)
+		err = ep.Kws.EmitTo(clients[message.To], util.ToJson(response), ikisocket.TextMessage)
 		if err != nil {
-			response.Event = "error"
-			response.Message = err.Error()
+			fmt.Println(err)
 		}
+	} else {
+		for i, v := range data.List {
 
-		arg := model.FeederParams{
-			Token: tokenFeeder.Data["token"].(string),
-			Data: map[string]interface{}{
-				"key": map[string]interface{}{
-					"id_registrasi_mahasiswa": id_registrasi_mahasiwa,
-					"id_kelas_kuliah":         id_kelas_kuliah,
-				},
-				"record": map[string]interface{}{
-					"nilai_angka":  fmt.Sprintf("%v", v.NilaiAkhir),
-					"nilai_huruf":  v.NilaiIndeks,
-					"nilai_indeks": fmt.Sprintf("%f", v.Bobot),
-				},
-			},
-		}
+			var paramAKM ParamsAKM
+			paramAKM.Semester = paramNilai.Semester
+			paramAKM.KdProdi = paramNilai.KdProdi
 
-		updateNilai, err := nilai.NewSyncNilai().UpdateNilai(arg)
-
-		if err != nil {
-			response.Event = "error"
-			response.Message = err.Error()
-		}
-
-		updateNilai.Data = make(map[string]interface{})
-
-		updateNilai.Data["name"] = v.Name
-		updateNilai.Data["npm"] = v.NPM
-		updateNilai.Data["order"] = i + 1
-		updateNilai.Data["kd_matakuliah"] = v.KdMatakuliah
-		updateNilai.Data["nilai_indeks"] = v.NilaiIndeks
-		updateNilai.Data["nilai_akhir"] = v.NilaiAkhir
-
-		if updateNilai.ErrorCode != 0 {
-			response.Event = message.Event
-
-			updateNilai.Data["status"] = `<span class="badge rounded-pill bg-danger " style="font-size:0.8rem !important">Gagal</span>`
-
-			data := fiber.Map{
-				"error_code": updateNilai.ErrorCode,
-				"error_desc": updateNilai.ErrorDesc,
-				"list":       updateNilai.Data,
-			}
-
-			response.Message = string(util.ToJson(data))
-		} else {
-			response.Event = message.Event
-
-			updateNilai.Data["status"] = `<span class="badge rounded-pill bg-success " style="font-size:0.8rem !important">Behasil</span>`
-
-			data := fiber.Map{
-				"error_code": updateNilai.ErrorCode,
-				"error_desc": updateNilai.ErrorDesc,
-				"list":       updateNilai.Data,
-			}
-			response.Message = string(util.ToJson(data))
-		}
-
-		if ep.Kws.IsAlive() {
-			// Emit the message directly to specified user
-			err = ep.Kws.EmitTo(clients[message.To], util.ToJson(response), ikisocket.TextMessage)
+			id_registrasi_mahasiwa, err := get_id_registrasi(tokenFeeder.Data["token"].(string), v.NPM, paramAKM)
 			if err != nil {
-				fmt.Println(err)
+				response.Event = "error"
+				response.Message = err.Error()
 			}
-		} else {
-			ep.Kws.Close()
-		}
 
-		// time.Sleep(1 * time.Second)
+			arg := model.FeederParams{
+				Token: tokenFeeder.Data["token"].(string),
+				Data: map[string]interface{}{
+					"key": map[string]interface{}{
+						"id_registrasi_mahasiswa": id_registrasi_mahasiwa,
+						"id_kelas_kuliah":         id_kelas_kuliah,
+					},
+					"record": map[string]interface{}{
+						"nilai_angka":  fmt.Sprintf("%v", v.NilaiAkhir),
+						"nilai_huruf":  v.NilaiIndeks,
+						"nilai_indeks": fmt.Sprintf("%f", v.Bobot),
+					},
+				},
+			}
+
+			updateNilai, err := nilai.NewSyncNilai().UpdateNilai(arg)
+
+			if err != nil {
+				response.Event = "error"
+				response.Message = err.Error()
+			}
+
+			updateNilai.Data = make(map[string]interface{})
+
+			updateNilai.Data["name"] = v.Name
+			updateNilai.Data["npm"] = v.NPM
+			updateNilai.Data["order"] = i + 1
+			updateNilai.Data["kd_matakuliah"] = v.KdMatakuliah
+			updateNilai.Data["nilai_indeks"] = v.NilaiIndeks
+			updateNilai.Data["nilai_akhir"] = v.NilaiAkhir
+
+			if updateNilai.ErrorCode != 0 {
+				response.Event = message.Event
+
+				updateNilai.Data["status"] = `<span class="badge rounded-pill bg-danger " style="font-size:0.8rem !important">Gagal</span>`
+
+				data := fiber.Map{
+					"error_code": updateNilai.ErrorCode,
+					"error_desc": updateNilai.ErrorDesc,
+					"list":       updateNilai.Data,
+				}
+
+				response.Message = string(util.ToJson(data))
+			} else {
+				response.Event = message.Event
+
+				updateNilai.Data["status"] = `<span class="badge rounded-pill bg-success " style="font-size:0.8rem !important">Behasil</span>`
+
+				data := fiber.Map{
+					"error_code": updateNilai.ErrorCode,
+					"error_desc": updateNilai.ErrorDesc,
+					"list":       updateNilai.Data,
+				}
+				response.Message = string(util.ToJson(data))
+			}
+
+			if ep.Kws.IsAlive() {
+				// Emit the message directly to specified user
+				err = ep.Kws.EmitTo(clients[message.To], util.ToJson(response), ikisocket.TextMessage)
+				if err != nil {
+					fmt.Println(err)
+				}
+			} else {
+				ep.Kws.Close()
+			}
+
+			// time.Sleep(1 * time.Second)
+		}
 	}
+
 }
 
 type ParamsLulusan struct {
@@ -984,8 +992,6 @@ func idRegRedis(token string, npm string, param ParamsAKM) (string, error) {
 
 	redisClient, err := rdb.RedisConn()
 
-	defer redisClient.Close()
-
 	if err != nil {
 		idFeeder, err := idRegFeeder(token, npm, param)
 
@@ -997,6 +1003,8 @@ func idRegRedis(token string, npm string, param ParamsAKM) (string, error) {
 
 		rdb.Set(npm, idReg)
 	}
+
+	defer redisClient.Close()
 
 	id, err := redisClient.Get(ctx, npm).Result()
 	if err == redis.Nil {

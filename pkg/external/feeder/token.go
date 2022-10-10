@@ -115,9 +115,7 @@ func SetRedis(key, value string) {
 		return
 	}
 
-	redisClient.SetEX(ctx, "key", "value", 120*time.Second)
-
-	err = redisClient.SetEX(ctx, key, value, 120*time.Second).Err()
+	err = redisClient.SetEX(ctx, key, value, 60*time.Second).Err()
 	if err != nil {
 		panic(err.Error())
 	}

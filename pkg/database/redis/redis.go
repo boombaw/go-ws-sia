@@ -2,7 +2,6 @@ package redis
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -22,13 +21,11 @@ func RedisConn() (*redis.Client, error) {
 		DB:       0,    // use default DB
 	})
 
-	pong, err := rdb.Ping(rdb.Context()).Result()
+	_, err := rdb.Ping(rdb.Context()).Result()
 
 	if err != nil {
 		return nil, err
 	}
-
-	log.Println("Ping : ", pong)
 
 	return rdb, nil
 }
