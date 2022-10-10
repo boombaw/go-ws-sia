@@ -24,11 +24,11 @@ func Conn() *gorm.DB {
 	db, err := gorm.Open(mysql.Open(mysqlConnString), &gorm.Config{})
 
 	// log.Printf("Connection string %v", mysqlConnString)
+
 	if err != nil {
 		log.Println("Error connecting to database: ", err.Error())
 		return nil
 	}
-	log.Println("Connected Database")
 
 	sqlDB, err := db.DB()
 	if err != nil {
@@ -37,8 +37,8 @@ func Conn() *gorm.DB {
 	}
 
 	sqlDB.SetConnMaxLifetime(2 * time.Minute)
-	sqlDB.SetMaxOpenConns(10)
-	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetMaxOpenConns(2)
+	sqlDB.SetMaxIdleConns(2)
 
 	return db
 }

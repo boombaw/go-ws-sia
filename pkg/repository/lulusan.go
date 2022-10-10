@@ -28,5 +28,8 @@ func (s *synclulusanRepository) ListLulusan(arg SyncLulusanParams) ([]model.Sync
 
 	db.Raw(query.GetLulusan, arg.KdProdi, arg.Semester).Scan(&lulusan)
 
+	sql, _ := db.DB()
+	defer sql.Close()
+
 	return lulusan, nil
 }

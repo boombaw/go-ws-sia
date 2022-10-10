@@ -28,6 +28,9 @@ func (l *nilaiRepository) ListTransaksiNilai(arg SyncNilaiParams) ([]model.SyncN
 
 	db.Raw(query.GetNilaiAkhir, arg.KdJadwal).Scan(&nilai)
 
+	sql, _ := db.DB()
+	defer sql.Close()
+
 	return nilai, nil
 }
 
@@ -37,6 +40,9 @@ func (l *nilaiRepository) ListJadwal(arg SyncNilaiParams) ([]model.Jadwal, error
 	var jadwal []model.Jadwal
 
 	db.Raw(query.GetJadwal, arg.KdJadwal).Scan(&jadwal)
+
+	sql, _ := db.DB()
+	defer sql.Close()
 
 	return jadwal, nil
 }

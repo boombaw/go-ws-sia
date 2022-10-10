@@ -77,7 +77,7 @@ var GetNilaiAkhir = `
 						ttn.THSMSTRLNM tahun_ajaran,
 						ttn.KDPSTTRLNM prodi,
 						ttn.NIMHSTRLNM npm,
-						npm_to_nama_mhs(NIMHSTRLNM) name,
+						tm.NMMHSMSMHS name,
 						ttn.KDKMKTRLNM kd_matakuliah,
 						ttn.BOBOTTRLNM bobot,
 						ttn.NLAKHTRLNM nilai_indeks,
@@ -86,6 +86,8 @@ var GetNilaiAkhir = `
 						tbl_transaksi_nilai ttn
 					JOIN tbl_nilai_detail tnd ON 
 						ttn.kd_transaksi_nilai = tnd.kd_transaksi_nilai
+					JOIN tbl_mahasiswa tm ON
+						tm.NIMHSMSMHS = ttn.NIMHSTRLNM
 					WHERE
 						tnd.kd_jadwal = ?
 						AND tnd.tipe = 10 ;`

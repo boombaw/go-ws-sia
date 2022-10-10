@@ -11,10 +11,14 @@ require (
 	github.com/ambelovsky/gosf-socketio v0.0.0-20220810204405-0f97832ec7af // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/antoniodipinto/ikisocket v0.0.0-20220806220653-2e4f04aebe6a // indirect
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/codegangsta/envy v0.0.0-20141216192214-4b78388c8ce4 // indirect
 	github.com/codegangsta/gin v0.0.0-20211113050330-71f90109db02 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fasthttp/websocket v1.5.0 // indirect
+	github.com/go-redis/redis v6.15.9+incompatible // indirect
+	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/gofiber/websocket/v2 v2.0.25 // indirect
 	github.com/google/uuid v1.3.0 // indirect

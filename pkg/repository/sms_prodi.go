@@ -27,5 +27,8 @@ func (l *smsProdiRepository) SMSProdi(arg SmsParams) string {
 	row := db.Raw(query.SmsProdi, arg.KdProdi).Row()
 	row.Scan(&data)
 
+	sql, _ := db.DB()
+	defer sql.Close()
+
 	return string(data)
 }

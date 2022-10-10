@@ -88,6 +88,9 @@ func (l *akmRepository) ListDO(arg AkmParams) ([]model.MhsDO, error) {
 	param 6 = actyear
 	*/
 
+	sql, _ := db.DB()
+	defer sql.Close()
+
 	db.Raw(query.SelectNA, arg.KdProdi, arg.Semester, arg.KdProdi, arg.Semester, studyStart, arg.Semester).Scan(&akm)
 
 	return akm, nil
@@ -103,6 +106,9 @@ func (l *akmRepository) LastAKM(arg LastAkmParams) (model.Akm, error) {
 	var akm model.Akm
 
 	db.Raw(query.SelectLastAKM, arg.Npm).Scan(&akm)
+
+	sql, _ := db.DB()
+	defer sql.Close()
 
 	return akm, nil
 }
@@ -120,6 +126,9 @@ func (a *akmRepository) UpdateHasSync(arg UpdateSyncParams) error {
 	if err != nil {
 		return err.Error
 	}
+
+	sql, _ := db.DB()
+	defer sql.Close()
 
 	return nil
 }

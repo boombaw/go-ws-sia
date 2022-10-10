@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -9,7 +11,9 @@ import (
 
 	"github.com/antoniodipinto/ikisocket"
 	"github.com/boombaw/go-ws-sia/pkg/external/feeder"
+	"github.com/go-redis/redis/v8"
 
+	rdb "github.com/boombaw/go-ws-sia/pkg/database/redis"
 	akm "github.com/boombaw/go-ws-sia/pkg/http/akm/action"
 	kelas "github.com/boombaw/go-ws-sia/pkg/http/kelas/action"
 	lulusan "github.com/boombaw/go-ws-sia/pkg/http/lulusan/action"
@@ -32,6 +36,7 @@ var (
 	clients = make(map[string]string)
 	// wsChan  = make(chan model.MessageObject)
 	json = jsoniter.ConfigCompatibleWithStandardLibrary
+	ctx  = context.Background()
 )
 
 type UserSocketID struct {
@@ -287,6 +292,8 @@ func SyncAkm(ep *ikisocket.EventPayload, message model.MessageObject) {
 				response.Message = err.Error()
 			}
 
+			updateAkm.Data = make(map[string]interface{})
+
 			if updateAkm.ErrorCode != 0 {
 				response.Event = message.Event
 
@@ -430,6 +437,8 @@ func SyncAkmNA(ep *ikisocket.EventPayload, message model.MessageObject) {
 				response.Event = "error"
 				response.Message = err.Error()
 			}
+
+			updateAkm.Data = make(map[string]interface{})
 
 			if updateAkm.ErrorCode != 0 {
 				response.Event = message.Event
@@ -578,6 +587,8 @@ func SyncAkmDO(ep *ikisocket.EventPayload, message model.MessageObject) {
 				response.Message = err.Error()
 			}
 
+			updateAkm.Data = make(map[string]interface{})
+
 			if updateAkm.ErrorCode != 0 {
 				response.Event = message.Event
 
@@ -704,7 +715,7 @@ func SyncUpdateNilai(ep *ikisocket.EventPayload, message model.MessageObject) {
 
 	id_kelas_kuliah, err := get_id_kelas(tokenFeeder.Data["token"].(string), paramNilai)
 
-	if err != nil {
+	if err != nil || id_kelas_kuliah == "" {
 		response.Event = "error"
 		response.Message = "Gagal Mendapatkan Id Kelas Kuliah"
 	}
@@ -713,6 +724,7 @@ func SyncUpdateNilai(ep *ikisocket.EventPayload, message model.MessageObject) {
 
 		var paramAKM ParamsAKM
 		paramAKM.Semester = paramNilai.Semester
+		paramAKM.KdProdi = paramNilai.KdProdi
 
 		id_registrasi_mahasiwa, err := get_id_registrasi(tokenFeeder.Data["token"].(string), v.NPM, paramAKM)
 		if err != nil {
@@ -741,6 +753,8 @@ func SyncUpdateNilai(ep *ikisocket.EventPayload, message model.MessageObject) {
 			response.Event = "error"
 			response.Message = err.Error()
 		}
+
+		updateNilai.Data = make(map[string]interface{})
 
 		updateNilai.Data["name"] = v.Name
 		updateNilai.Data["npm"] = v.NPM
@@ -871,6 +885,8 @@ func SyncInsertLulusan(ep *ikisocket.EventPayload, message model.MessageObject) 
 			response.Message = err.Error()
 		}
 
+		insertLulusan.Data = make(map[string]interface{})
+
 		insertLulusan.Data["npm"] = v.NpmMahasiswa
 		insertLulusan.Data["name"] = v.Name
 		insertLulusan.Data["order"] = i + 1
@@ -924,6 +940,26 @@ func get_status_akm(token string, npm string, param ParamsAKM) (string, error) {
 
 func get_id_registrasi(token string, npm string, param ParamsAKM) (string, error) {
 
+	idRegistrasi, err := idRegRedis(token, npm, param)
+
+	if err != nil || idRegistrasi == "" {
+		idFeeder, err := idRegFeeder(token, npm, param)
+
+		if err != nil {
+			return "", err
+		}
+
+		rdb.Set(npm, idFeeder)
+
+		return idFeeder, nil
+	}
+
+	return idRegistrasi, nil
+
+}
+
+func idRegFeeder(token string, npm string, param ParamsAKM) (string, error) {
+
 	var arg model.FeederParams
 	arg.Token = token
 	arg.Sms = repository.NewSmsProdiRepository().SMSProdi(repository.SmsParams{KdProdi: param.KdProdi})
@@ -941,7 +977,45 @@ func get_id_registrasi(token string, npm string, param ParamsAKM) (string, error
 	}
 
 	return r.IDRegistrasiMahasiswa, nil
+}
 
+func idRegRedis(token string, npm string, param ParamsAKM) (string, error) {
+	var idReg string
+
+	redisClient, err := rdb.RedisConn()
+
+	defer redisClient.Close()
+
+	if err != nil {
+		idFeeder, err := idRegFeeder(token, npm, param)
+
+		if err != nil {
+			return "", err
+		}
+
+		idReg = idFeeder
+
+		rdb.Set(npm, idReg)
+	}
+
+	id, err := redisClient.Get(ctx, npm).Result()
+	if err == redis.Nil {
+
+		idFeeder, err := idRegFeeder(token, npm, param)
+
+		if err != nil {
+			return "", err
+		}
+
+		rdb.Set(npm, idFeeder)
+
+	} else if err != nil {
+		return "", errors.New("gagal Mendapatkan id registrasi " + npm)
+	} else {
+		idReg = id
+	}
+
+	return idReg, nil
 }
 
 func get_id_kelas(token string, param ParamsNilai) (string, error) {
