@@ -1056,7 +1056,7 @@ func idKelasFeeder(token string, param ParamsNilai) (string, error) {
 
 	keyRedis := kelas
 
-	rdb.Set(keyRedis, r.IDKelasKuliah, 4, 259200) //259200 seconds => 3 days
+	rdb.Set(keyRedis, r.IDKelasKuliah, 0, 259200) //259200 seconds => 3 days
 
 	return r.IDKelasKuliah, nil
 }
@@ -1065,7 +1065,6 @@ func idKelasRedis(token string, param ParamsNilai) (string, error) {
 	var idReg string
 
 	redisClient := rdb.RedisDB
-	redisClient.Options().DB = 4
 
 	smsProdi := repository.NewSmsProdiRepository().SMSProdi(repository.SmsParams{KdProdi: param.KdProdi})
 	keyRedis := smsProdi + "_" + strings.ReplaceAll(strings.TrimSpace(param.KdMatakuliah), "-", "") + "_" + strings.ReplaceAll(strings.TrimSpace(param.Kelas), "-", "") + "_" + param.Semester
@@ -1079,7 +1078,7 @@ func idKelasRedis(token string, param ParamsNilai) (string, error) {
 			return "", err
 		}
 
-		rdb.Set(keyRedis, idFeeder, 4, 259200) //259200 seconds => 3 days
+		rdb.Set(keyRedis, idFeeder, 0, 259200) //259200 seconds => 3 days
 
 	} else if err != nil {
 		return "", errors.New("gagal Mendapatkan id kelas " + keyRedis)
