@@ -712,7 +712,7 @@ func SyncUpdateNilai(ep *ikisocket.EventPayload, message model.MessageObject) {
 
 	if err != nil || id_kelas_kuliah == "" {
 		response.Event = "error"
-		response.Message = "Gagal Mendapatkan Id Kelas Kuliah"
+		response.Message = err.Error()
 
 		err = ep.Kws.EmitTo(clients[message.To], util.ToJson(response), ikisocket.TextMessage)
 		if err != nil {
@@ -1048,6 +1048,7 @@ func idKelasFeeder(token string, param ParamsNilai) (string, error) {
 
 	r, err := k.List(arg)
 	if err != nil {
+		log.Println("Error Kelas Kuliah : ", err)
 		return "", err
 	}
 

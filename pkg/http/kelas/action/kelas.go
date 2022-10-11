@@ -2,6 +2,7 @@ package action
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -41,25 +42,40 @@ func (r *listKelas) List(arg model.FeederParams) (model.FeederListKelas, error) 
 
 	jsonPayload := string(util.ToJson(payload))
 
-	_, body, err := gorequest.New().Timeout(5 * time.Minute).Post(url).Send(jsonPayload).End()
+	resp, body, err := gorequest.New().Timeout(5 * time.Minute).Post(url).Send(jsonPayload).End()
+
+	if resp.StatusCode != 200 {
+		return model.FeederListKelas{}, fmt.Errorf("error Koneksi Ke Feeder HTTP Header %v", resp.StatusCode)
+	}
 
 	err2 := json.Unmarshal([]byte(body), &feederResponse)
 
 	if err2 != nil {
+		log.Println("Error Kelas 2", err2)
 		return model.FeederListKelas{}, fmt.Errorf("error GET LIST KELAS : %v", err)
 	}
 
 	if err != nil {
+		log.Println("Error Kelas 1", err)
 		return model.FeederListKelas{}, fmt.Errorf("error GET LIST KELAS : %v", err)
 	}
 
 	if feederResponse.ErrorCode != 0 {
+		log.Println("Error Feeder Response", feederResponse.ErrorDesc)
 		return model.FeederListKelas{}, fmt.Errorf("error GET LIST KELAS : %v", feederResponse.ErrorDesc)
 	}
 
 	for _, v := range feederResponse.Data {
-		b, _ := json.Marshal(v)
-		_ = json.Unmarshal(b, &list_kelas)
+		b, err := json.Marshal(v)
+
+		if err != nil {
+			log.Println("Error marshalling json")
+		}
+
+		err = json.Unmarshal(b, &list_kelas)
+		if err != nil {
+			log.Println("Error unmarshalling json")
+		}
 	}
 
 	return list_kelas, nil
