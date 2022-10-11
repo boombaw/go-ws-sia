@@ -8,13 +8,14 @@ import (
 )
 
 // ListTransaksiNilai is the responsible for listing all the nilai published
-func ListTransaksiNilai(kdJadwal string) model.MessageResponse {
+func ListTransaksiNilai(kdJadwal string, semester string) model.MessageResponse {
 	var resp model.MessageResponse
 
 	repo := repository.NewNilaiRepository()
 
 	arg := repository.SyncNilaiParams{
 		KdJadwal: kdJadwal,
+		Semester: semester,
 	}
 
 	nilai, err := repo.ListTransaksiNilai(arg)

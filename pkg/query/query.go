@@ -89,8 +89,8 @@ var GetNilaiAkhir = `
 					JOIN tbl_mahasiswa tm ON
 						tm.NIMHSMSMHS = ttn.NIMHSTRLNM
 					WHERE
-						tnd.kd_jadwal = ?
-						AND tnd.tipe = 10 ORDER BY ttn.THSMSTRLNM desc limit 1;`
+						tnd.kd_jadwal = ? and ttn.THSMSTRAKM = ? 
+						AND tnd.tipe = 10 ORDER BY ttn.THSMSTRLNM desc;`
 
 var GetJadwal = `SELECT
 					id_jadwal id,

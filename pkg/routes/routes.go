@@ -661,7 +661,7 @@ func SyncUpdateNilai(ep *ikisocket.EventPayload, message model.MessageObject) {
 		return
 	}
 
-	response = nilai.ListTransaksiNilai(paramNilai.KdJadwal)
+	response = nilai.ListTransaksiNilai(paramNilai.KdJadwal, paramNilai.Semester)
 
 	type ListNilaiJson struct {
 		List []struct {

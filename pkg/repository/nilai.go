@@ -10,6 +10,7 @@ type nilaiRepository struct{}
 
 type SyncNilaiParams struct {
 	KdJadwal string `json:"kd_jadwal"`
+	Semester string `json:"semester"`
 }
 
 type NilaiRepository interface {
@@ -26,7 +27,7 @@ func (l *nilaiRepository) ListTransaksiNilai(arg SyncNilaiParams) ([]model.SyncN
 	var db = database.Conn()
 	var nilai []model.SyncNilai
 
-	db.Raw(query.GetNilaiAkhir, arg.KdJadwal).Scan(&nilai)
+	db.Raw(query.GetNilaiAkhir, arg.KdJadwal, arg.Semester).Scan(&nilai)
 
 	sql, _ := db.DB()
 	defer sql.Close()
