@@ -318,13 +318,13 @@ func SyncAkm(ep *ikisocket.EventPayload, message model.MessageObject) {
 				response.Message = string(util.ToJson(data))
 
 				// only in feeder live not in sandbox
-				// var p repository.UpdateSyncParams
-				// p.ID, _ = strconv.Atoi(v.ID)
-				// err = repository.NewAKMRepository().UpdateHasSync(p)
+				var p repository.UpdateSyncParams
+				p.ID, _ = strconv.Atoi(v.ID)
+				err = repository.NewAKMRepository().UpdateHasSync(p)
 
-				// if err != nil {
-				// 	log.Println("Error update status sync akm ", err.Error())
-				// }
+				if err != nil {
+					log.Println("Error update status sync akm ", err.Error())
+				}
 			}
 		} else {
 			response.Event = "error"

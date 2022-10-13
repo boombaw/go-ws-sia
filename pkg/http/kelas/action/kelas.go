@@ -51,6 +51,8 @@ func (r *listKelas) List(arg model.FeederParams) (model.FeederListKelas, error) 
 	err2 := json.Unmarshal([]byte(body), &feederResponse)
 
 	if err2 != nil {
+		log.Printf("%v", body)
+		log.Println(jsonPayload)
 		log.Println("Error Kelas 2", err2)
 		return model.FeederListKelas{}, fmt.Errorf("error GET LIST KELAS : %v", err)
 	}
